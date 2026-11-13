@@ -21,9 +21,9 @@ android.ndk = 25b
 android.archs = arm64-v8a
 android.accept_sdk_license = True
 
-p4a.branch = develop
+# develop branch olib tashlandi: bu branch ko'pincha CI'da nosoz build beradi
+# p4a.branch = develop
 
 [buildozer]
-
 log_level = 2
 warn_on_root = 1
