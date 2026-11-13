@@ -19,8 +19,7 @@ jobs:
           pip install --upgrade buildozer cython==0.29.33 virtualenv
 
       - name: APK yaratish
-        run: |
-          yes | buildozer android debug
+        run: buildozer android debug
 
       - name: Tayyor APK yuklash
         uses: actions/upload-artifact@v4
