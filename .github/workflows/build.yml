@@ -3,15 +3,26 @@ on: [push]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-      - name: APK yaratish
-        uses: ArtemSBulgakov/buildozer-action@v1
+
+      - name: Python sozlash
+        uses: actions/setup-python@v5
         with:
-          command: buildozer android debug
-          buildozer_version: master
-      - name: APK yuklash
+          python-version: '3.10'
+
+      - name: Kerakli kutubxonalarni ornatish
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git zip unzip openjdk-17-jdk python3-pip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+          pip install --upgrade buildozer cython==0.29.33 virtualenv
+
+      - name: APK yaratish
+        run: |
+          yes | buildozer android debug
+
+      - name: Tayyor APK yuklash
         uses: actions/upload-artifact@v4
         with:
           name: ODTI-Energiya-APK
