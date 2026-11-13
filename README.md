@@ -1,1 +1,1 @@
-# Akramov-Xushnudbek-
+#Akramov-Xushnudbek-
