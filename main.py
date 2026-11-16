@@ -273,13 +273,11 @@ class HomeScreen(Screen):
     self.jurnal = []
     self.joriy = "ODTI - Asosiy bino"
     self.avto = True
-    # Standart holatda REAL rejim (ulanmasa 0 turadi)
     self.test_rejim = False
     self.ip = "192.168.4.1"
 
     root = BoxLayout(orientation="vertical", padding=12, spacing=8)
 
-    # 1. Yuqori bar: Xodim, Rejim (REAL/TEST), Jurnal, Chiqish
     top_u = BoxLayout(spacing=5, size_hint=(1, 0.06))
     self.u_lbl = Label(
         text="● admin",
@@ -327,7 +325,6 @@ class HomeScreen(Screen):
     top_u.add_widget(btn_out)
     root.add_widget(top_u)
 
-    # 2. Bino tanlash va + Bino
     h_bar = BoxLayout(spacing=8, size_hint=(1, 0.07))
     self.spn = Spinner(
         text=self.joriy,
@@ -338,6 +335,7 @@ class HomeScreen(Screen):
         size_hint=(0.72, 1),
     )
     self.spn.bind(text=self.hudud_ozgardi)
+
     btn_add = NiceButton(
         text="+ Bino",
         font_size="13sp",
@@ -347,11 +345,50 @@ class HomeScreen(Screen):
         size_hint=(0.28, 1),
     )
     btn_add.bind(on_press=self.yangi_bino)
+
     h_bar.add_widget(self.spn)
     h_bar.add_widget(btn_add)
     root.add_widget(h_bar)
 
-    # 3. Manzil va Xarita kartasi
     m_card = ModernCard(
         bg=(0.12, 0.16, 0.23, 1), padding=[10, 6], spacing=8, size_hint=(1, 0.085)
     )
+
+    root.add_widget(m_card)
+    self.add_widget(root)
+
+  def hudud_ozgardi(self, *args):
+    pass
+
+  def rejim_oyna(self, *args):
+    pass
+
+  def jurnal_oyna(self, *args):
+    pass
+
+  def yangi_bino(self, *args):
+    pass
+
+  def chiqish(self, *args):
+    pass
+
+
+class ODTIApp(App):
+  def build(self):
+    self.db = {"users": {"admin": "1234"}}
+    self.sm = ScreenManager()
+    self.login_screen = LoginScreen(self)
+    self.home_screen = HomeScreen(self)
+    self.sm.add_widget(self.login_screen)
+    self.sm.add_widget(self.home_screen)
+    return self.sm
+
+  def ochish(self, user):
+    self.sm.current = "home"
+
+  def save_db(self):
+    pass
+
+
+if __name__ == "__main__":
+  ODTIApp().run()
