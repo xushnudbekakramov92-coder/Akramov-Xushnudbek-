@@ -1,4 +1,4 @@
-import random, time, webbrowser
+import json, os, random, time, webbrowser
 from kivy.app import App
 from kivy.clock import Clock
 from kivy.graphics import Color, Ellipse, Line, Rectangle
@@ -6,6 +6,8 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.label import Label
 from kivy.uix.popup import Popup
+from kivy.uix.screenmanager import Screen, ScreenManager
+from kivy.uix.scrollview import ScrollView
 from kivy.uix.spinner import Spinner
 from kivy.uix.textinput import TextInput
 from kivy.uix.widget import Widget
@@ -28,9 +30,9 @@ class PowerGraph(Widget):
     if self.width <= 10 or self.height <= 10:
       return
     with self.canvas:
-      Color(0.1, 0.12, 0.16, 1)
+      Color(0.08, 0.1, 0.14, 1)
       Rectangle(pos=self.pos, size=self.size)
-      Color(0.35, 0.4, 0.5, 1)
+      Color(0.3, 0.35, 0.45, 1)
       Line(rectangle=(self.x, self.y, self.width, self.height), width=1.2)
       ly = self.y + (self.max_limit / self.max_scale) * self.height
       Color(0.95, 0.2, 0.2, 0.85)
@@ -50,251 +52,292 @@ class PowerGraph(Widget):
         Ellipse(pos=(px - 3.5, py - 3.5), size=(7, 7))
 
 
-class ElektrNazoratApp(App):
+class AuthScreen(Screen):
 
-  def build(self):
-    self.hududlar = {
-        "ODTI - Asosiy bino": [50.0, "Olmaliq, A.Temur 56 (1-qavat)", 40.8447, 69.5983],
-        "ODTI - Laboratoriya": [35.0, "Olmaliq, ODTI B-korpus", 40.8455, 69.5995],
-        "ODTI - Yotoqxona": [25.0, "Talabalar shaharchasi", 40.8430, 69.5960],
-        "Olmaliq tarmogi": [60.0, "Markaziy TP-14 nimstansiya", 40.8480, 69.6020],
-    }
-    self.baza = {
-        k: {"t": [], "kwh": 0.0, "pik": 0.0, "v": 220.0, "a": 0.0, "vq": "00:00:00"}
-        for k in self.hududlar
-    }
-    self.joriy = "ODTI - Asosiy bino"
-    self.limit = 50.0
-    self.avto, self.ip, self.ul = True, "192.168.4.1", False
+  def __init__(self, app_ref, **kwargs):
+    super().__init__(**kwargs)
+    self.app = app_ref
+    self.is_reg = False
 
-    root = BoxLayout(orientation="vertical", padding=12, spacing=8)
-
-    hdr = BoxLayout(spacing=8, size_hint=(1, 0.07))
-    hdr.add_widget(
+    root = BoxLayout(orientation="vertical", padding=25, spacing=12)
+    root.add_widget(
         Label(
-            text="SCHYOTCHIK MONITORING",
-            font_size="15sp",
+            text="ODTI ENERGIYA PRO (SCADA)",
+            font_size="19sp",
             bold=True,
-            color=(0.3, 0.8, 1, 1),
-            size_hint=(0.62, 1),
+            color=(0.3, 0.85, 1, 1),
+            size_hint=(1, 0.16),
         )
     )
-    self.m_btn = Button(
-        text="Schyotchik IP",
+    self.m_lbl = Label(
+        text="Tizimga kirish", font_size="16sp", bold=True, size_hint=(1, 0.08)
+    )
+    root.add_widget(self.m_lbl)
+
+    self.name_in = TextInput(
+        hint_text="Ism-familiya",
+        multiline=False,
+        size_hint=(1, 0.1),
+        opacity=0,
+        disabled=True,
+    )
+    root.add_widget(self.name_in)
+
+    self.lg_in = TextInput(
+        hint_text="Login (admin)", multiline=False, size_hint=(1, 0.1)
+    )
+    root.add_widget(self.lg_in)
+
+    self.pw_in = TextInput(
+        hint_text="Parol (1234)",
+        password=True,
+        multiline=False,
+        size_hint=(1, 0.1),
+    )
+    root.add_widget(self.pw_in)
+
+    self.msg = Label(
+        text="", font_size="13sp", color=(1, 0.3, 0.3, 1), size_hint=(1, 0.08)
+    )
+    root.add_widget(self.msg)
+
+    self.act_btn = Button(
+        text="KIRISH",
+        font_size="16sp",
+        bold=True,
+        background_color=(0.15, 0.6, 0.85, 1),
+        size_hint=(1, 0.11),
+    )
+    self.act_btn.bind(on_press=self.submit)
+    root.add_widget(self.act_btn)
+
+    self.sw_btn = Button(
+        text="Royxatdan otish (Kuzatuvchi)",
+        font_size="14sp",
+        background_color=(0.25, 0.3, 0.4, 1),
+        size_hint=(1, 0.1),
+    )
+    self.sw_btn.bind(on_press=self.toggle)
+    root.add_widget(self.sw_btn)
+    root.add_widget(Widget(size_hint=(1, 0.17)))
+    self.add_widget(root)
+
+  def toggle(self, inst):
+    self.is_reg = not self.is_reg
+    self.msg.text = ""
+    if self.is_reg:
+      self.m_lbl.text = "Yangi kuzatuvchi yaratish"
+      self.name_in.opacity, self.name_in.disabled = 1, False
+      self.act_btn.text, self.act_btn.background_color = (
+          "ROYXATDAN OTISH",
+          (0.2, 0.7, 0.35, 1),
+      )
+      self.sw_btn.text = "Kirish oynasiga qaytish"
+    else:
+      self.m_lbl.text = "Tizimga kirish"
+      self.name_in.opacity, self.name_in.disabled = 0, True
+      self.act_btn.text, self.act_btn.background_color = (
+          "KIRISH",
+          (0.15, 0.6, 0.85, 1),
+      )
+      self.sw_btn.text = "Royxatdan otish (Kuzatuvchi)"
+
+  def submit(self, inst):
+    lg, pw = self.lg_in.text.strip(), self.pw_in.text.strip()
+    if not lg or not pw:
+      self.msg.text = "Login va parolni kiriting!"
+      return
+    if self.is_reg:
+      if lg in self.app.data["users"]:
+        self.msg.text = "Bu login band!"
+        return
+      nm = self.name_in.text.strip() or lg
+      self.app.data["users"][lg] = {"parol": pw, "ism": nm, "rol": "user"}
+      self.app.save_db()
+      self.app.login_ok(nm, "user")
+    else:
+      u = self.app.data["users"].get(lg)
+      if u and u["parol"] == pw:
+        self.app.login_ok(u["ism"], u.get("rol", "user"))
+      else:
+        self.msg.text = "Login yoki parol xato!"
+
+
+class MainScreen(Screen):
+
+  def __init__(self, app_ref, **kwargs):
+    super().__init__(**kwargs)
+    self.app = app_ref
+    self.baza = {}
+    self.jurnal = []
+    self.joriy = "ODTI - Asosiy bino"
+    self.avto, self.ip, self.ul = True, "192.168.4.1", False
+    self.tg_chat = ""
+
+    root = BoxLayout(orientation="vertical", padding=10, spacing=6)
+
+    # 1. Xodim, Rol va Chiqish
+    u_bar = BoxLayout(spacing=6, size_hint=(1, 0.06))
+    self.u_lbl = Label(
+        text="Xodim: Admin",
         font_size="12sp",
         bold=True,
-        background_color=(0.3, 0.4, 0.7, 1),
-        size_hint=(0.38, 1),
+        color=(0.4, 0.95, 0.5, 1),
+        halign="left",
+        size_hint=(0.74, 1),
     )
-    self.m_btn.bind(on_press=self.ip_oyna)
-    hdr.add_widget(self.m_btn)
-    root.add_widget(hdr)
+    self.u_lbl.bind(size=self.u_lbl.setter("text_size"))
+    u_bar.add_widget(self.u_lbl)
+    out_b = Button(
+        text="Chiqish",
+        font_size="12sp",
+        bold=True,
+        background_color=(0.75, 0.25, 0.25, 1),
+        size_hint=(0.26, 1),
+    )
+    out_b.bind(on_press=self.logout)
+    u_bar.add_widget(out_b)
+    root.add_widget(u_bar)
 
-    top = BoxLayout(spacing=8, size_hint=(1, 0.08))
+    # 2. Tezkor tugmalar (IP, QR, Jurnal, Telegram)
+    tools = BoxLayout(spacing=5, size_hint=(1, 0.07))
+    self.ip_b = Button(
+        text="IP: Test",
+        font_size="11sp",
+        bold=True,
+        background_color=(0.3, 0.4, 0.7, 1),
+    )
+    self.ip_b.bind(on_press=self.ip_oyna)
+    qr_b = Button(
+        text="QR Kod",
+        font_size="11sp",
+        bold=True,
+        background_color=(0.2, 0.5, 0.6, 1),
+    )
+    qr_b.bind(on_press=self.qr_oyna)
+    log_b = Button(
+        text="Jurnal (0)",
+        font_size="11sp",
+        bold=True,
+        background_color=(0.6, 0.35, 0.2, 1),
+    )
+    log_b.bind(on_press=self.jurnal_oyna)
+    self.log_b = log_b
+    tg_b = Button(
+        text="Telegram",
+        font_size="11sp",
+        bold=True,
+        background_color=(0.15, 0.55, 0.85, 1),
+    )
+    tg_b.bind(on_press=self.tg_oyna)
+    tools.add_widget(self.ip_b)
+    tools.add_widget(qr_b)
+    tools.add_widget(log_b)
+    tools.add_widget(tg_b)
+    root.add_widget(tools)
+
+    # 3. Hudud tanlash va + Hudud (faqat Admin uchun)
+    top = BoxLayout(spacing=6, size_hint=(1, 0.07))
     self.spn = Spinner(
         text=self.joriy,
-        values=list(self.hududlar.keys()),
-        font_size="13sp",
+        font_size="12sp",
         background_color=(0.15, 0.35, 0.55, 1),
         size_hint=(0.74, 1),
     )
     self.spn.bind(text=self.h_ozg)
     top.add_widget(self.spn)
-    add_b = Button(
+    self.add_b = Button(
         text="+ Hudud",
-        font_size="13sp",
+        font_size="12sp",
         bold=True,
         background_color=(0.2, 0.6, 0.3, 1),
         size_hint=(0.26, 1),
     )
-    add_b.bind(on_press=self.h_oyna)
-    top.add_widget(add_b)
+    self.add_b.bind(on_press=self.h_oyna)
+    top.add_widget(self.add_b)
     root.add_widget(top)
 
-    loc = BoxLayout(spacing=8, size_hint=(1, 0.09))
+    # 4. Manzil va Xarita
+    loc = BoxLayout(spacing=6, size_hint=(1, 0.07))
     self.l_lbl = Label(
-        text="Manzil: " + self.hududlar[self.joriy][1],
-        font_size="12sp",
+        text="Manzil: ...",
+        font_size="11sp",
         color=(0.95, 0.85, 0.4, 1),
         halign="left",
         valign="middle",
-        size_hint=(0.70, 1),
+        size_hint=(0.72, 1),
     )
     self.l_lbl.bind(size=self.l_lbl.setter("text_size"))
     loc.add_widget(self.l_lbl)
     map_b = Button(
-        text="Xaritada\nkorish",
+        text="Xarita",
         font_size="12sp",
         bold=True,
-        halign="center",
         background_color=(0.1, 0.55, 0.5, 1),
-        size_hint=(0.30, 1),
+        size_hint=(0.28, 1),
     )
     map_b.bind(on_press=self.xarita)
     loc.add_widget(map_b)
     root.add_widget(loc)
 
-    self.graph = PowerGraph(size_hint=(1, 0.29))
+    # 5. Jonli Grafik
+    self.graph = PowerGraph(size_hint=(1, 0.25))
     root.add_widget(self.graph)
 
+    # 6. 3 Faza (L1, L2, L3) va Quyosh paneli malumotlari
     self.info = Label(
-        text="Yuklanmoqda...", font_size="14sp", halign="center", size_hint=(1, 0.19)
+        text="Yuklanmoqda...", font_size="13sp", halign="center", size_hint=(1, 0.23)
     )
     root.add_widget(self.info)
 
+    # 7. Statistika (Jami kWh va Xarajat)
     self.stat = Label(
         text="Jami: 0.00 kWh | Xarajat: 0 som",
-        font_size="13sp",
+        font_size="12sp",
         color=(0.8, 0.85, 0.9, 1),
         halign="center",
-        size_hint=(1, 0.10),
+        size_hint=(1, 0.09),
     )
     root.add_widget(self.stat)
 
+    # 8. Ogohlantirish statusi
     self.holat = Label(
         text="[AVTO] Tizim faol",
-        font_size="14sp",
+        font_size="13sp",
         bold=True,
         color=(0.2, 0.9, 0.2, 1),
-        size_hint=(1, 0.08),
+        size_hint=(1, 0.07),
     )
     root.add_widget(self.holat)
 
-    btns = BoxLayout(spacing=10, size_hint=(1, 0.10))
+    # 9. Boshqaruv tugmalari
+    btns = BoxLayout(spacing=8, size_hint=(1, 0.09))
     self.t_btn = Button(
         text="Pauza",
-        font_size="15sp",
+        font_size="14sp",
         bold=True,
         background_color=(0.85, 0.5, 0.1, 1),
     )
     self.t_btn.bind(on_press=self.pauza)
     btns.add_widget(self.t_btn)
-    r_btn = Button(
+    self.r_btn = Button(
         text="Nolga tushirish",
-        font_size="15sp",
+        font_size="14sp",
         bold=True,
         background_color=(0.7, 0.2, 0.2, 1),
     )
-    r_btn.bind(on_press=self.toza)
-    btns.add_widget(r_btn)
+    self.r_btn.bind(on_press=self.toza)
+    btns.add_widget(self.r_btn)
     root.add_widget(btns)
 
-    self.ev = Clock.schedule_interval(self.yangila, 2.0)
-    return root
+    self.add_widget(root)
+    self.ev = None
 
-  def xarita(self, inst):
-    h = self.hududlar[self.joriy]
-    webbrowser.open(f"https://google.com{h[2]},{h[3]}")
-
-  def ip_oyna(self, inst):
-    box = BoxLayout(orientation="vertical", padding=15, spacing=10)
-    inp = TextInput(text=self.ip, multiline=False)
-    btn = Button(
-        text="Saqlash", background_color=(0.2, 0.7, 0.3, 1), size_hint=(1, 0.4)
-    )
-    box.add_widget(Label(text="Schyotchik (ESP32) IP:"))
-    box.add_widget(inp)
-    box.add_widget(btn)
-    pop = Popup(title="Ulanish", content=box, size_hint=(0.85, 0.42))
-
-    def ok(b):
-      self.ip, self.ul = inp.text.strip(), True
-      self.m_btn.text, self.m_btn.background_color = "IP: " + self.ip, (0.2, 0.65, 0.3, 1)
-      pop.dismiss()
-
-    btn.bind(on_press=ok)
-    pop.open()
-
-  def pauza(self, inst):
-    if self.avto:
-      self.ev.cancel()
-      self.avto = False
-      self.t_btn.text, self.t_btn.background_color = "Davom ettirish", (0.2, 0.7, 0.3, 1)
-      self.holat.text, self.holat.color = "[PAUZA] Toxtatildi", (1, 0.8, 0.2, 1)
-    else:
-      self.ev = Clock.schedule_interval(self.yangila, 2.0)
-      self.avto = True
-      self.t_btn.text, self.t_btn.background_color = "Pauza", (0.85, 0.5, 0.1, 1)
-
-  def toza(self, inst):
-    m = self.baza[self.joriy]
-    m["t"], m["kwh"], m["pik"] = [], 0.0, 0.0
-    self.graph.set_data([], self.limit)
-    self.holat.text, self.holat.color = "[TOZALANDI] Nolga tushirildi", (0.3, 0.8, 1, 1)
-
-  def h_ozg(self, spn, txt):
-    self.joriy = txt
-    self.limit = self.hududlar[txt][0]
-    self.l_lbl.text = "Manzil: " + self.hududlar[txt][1]
-    self.ekran()
-
-  def yangila(self, dt):
-    for nom, info in self.hududlar.items():
-      lim = info[0]
-      p = round(random.uniform(lim * 0.25, lim * 1.15), 2)
-      v = round(random.uniform(216.0, 234.0), 1)
-      m = self.baza[nom]
-      m["kwh"] += (p * 2) / 3600.0
-      if p > m["pik"]:
-        m["pik"] = p
-      m["v"], m["a"], m["vq"] = v, round(p * 1000 / v, 2), time.strftime("%H:%M:%S")
-      m["t"].append(p)
-      if len(m["t"]) > 20:
-        m["t"].pop(0)
-    self.ekran()
-
-  def ekran(self):
-    m = self.baza[self.joriy]
-    self.graph.set_data(m["t"], self.limit)
-    if not m["t"]:
-      return
-    p = m["t"][-1]
-    mb = f"IP: {self.ip}" if self.ul else "Simulyatsiya"
-    self.info.text = f"Vaqt: {m['vq']} | {mb}\nQuvvat: {p} kW (Limit: {self.limit} kW)\nKuchlanish: {m['v']} V | Tok: {m['a']} A"
-    kwh = round(m["kwh"], 4)
-    self.stat.text = f"Jami: {kwh} kWh | Xarajat: {int(kwh * 900)} som\nMaksimal pik: {m['pik']} kW"
-    if p > self.limit:
-      self.holat.text, self.holat.color = "[!] DIQQAT: Limit oshib ketdi!", (1, 0.2, 0.2, 1)
-    else:
-      self.holat.text, self.holat.color = "[OK] Tarmoq barqaror", (0.2, 0.9, 0.2, 1)
-
-  def h_oyna(self, inst):
-    box = BoxLayout(orientation="vertical", padding=15, spacing=8)
-    n_in = TextInput(hint_text="Hudud nomi", multiline=False)
-    j_in = TextInput(hint_text="Manzil / Joyi", multiline=False)
-    l_in = TextInput(hint_text="Limit kW", input_filter="float", multiline=False)
-    btn = Button(
-        text="Qoshish", background_color=(0.2, 0.7, 0.3, 1), size_hint=(1, 0.45)
-    )
-    box.add_widget(Label(text="Yangi schyotchik:"))
-    box.add_widget(n_in)
-    box.add_widget(j_in)
-    box.add_widget(l_in)
-    box.add_widget(btn)
-    pop = Popup(title="Yangi obyekt", content=box, size_hint=(0.88, 0.55))
-
-    def qosh(b):
-      if n_in.text.strip() and l_in.text.strip():
-        try:
-          nom, lim = n_in.text.strip(), float(l_in.text.strip())
-          self.hududlar[nom] = [lim, j_in.text.strip() or "Olmaliq", 40.845, 69.599]
-          self.baza[nom] = {
-              "t": [],
-              "kwh": 0.0,
-              "pik": 0.0,
-              "v": 220.0,
-              "a": 0.0,
-              "vq": "00:00:00",
-          }
-          self.spn.values = list(self.hududlar.keys())
-          self.spn.text = nom
-          pop.dismiss()
-        except ValueError:
-          pass
-
-    btn.bind(on_press=qosh)
-    pop.open()
-
-
-if __name__ == "__main__":
-  ElektrNazoratApp().run()
+  def init_session(self, user_name, rol):
+    hududlar = self.app.data["hududlar"]
+    for k, v in hududlar.items():
+      if k not in self.baza:
+        self.baza[k] = {
+            "t": [],
+            "kwh": v[4],
+            "pik": 0.0,
