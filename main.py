@@ -53,11 +53,10 @@ class NiceButton(Button):
 
   def redraw(self, *args):
     self.canvas.before.clear()
-    c = (
-        [max(0, x - 0.08) for x in self.bg[:3]] + [1]
-        if self.state == "down"
-        else self.bg
-    )
+    if self.state == "down":
+      c = [max(0, x - 0.08) for x in self.bg[:3]] + [1]
+    else:
+      c = self.bg
     with self.canvas.before:
       Color(*c)
       RoundedRectangle(pos=self.pos, size=self.size, radius=[self.rad])
@@ -110,7 +109,7 @@ class NeonGraph(Widget):
       return
     with self.canvas:
       Color(0.10, 0.13, 0.19, 1)
-      RoundedRectangle(pos=self.pos, size=self.size, radius=[16])
+      RoundedRectangle(pos=self.pos, size=self.size, radius=[14])
 
       Color(0.22, 0.27, 0.36, 0.45)
       for i in range(1, 4):
@@ -278,6 +277,7 @@ class HomeScreen(Screen):
 
     root = BoxLayout(orientation="vertical", padding=12, spacing=8)
 
+    # 1. Yuqori bar
     top_u = BoxLayout(spacing=5, size_hint=(1, 0.06))
     self.u_lbl = Label(
         text="● admin",
@@ -325,6 +325,7 @@ class HomeScreen(Screen):
     top_u.add_widget(btn_out)
     root.add_widget(top_u)
 
+    # 2. Bino tanlash va + Bino
     h_bar = BoxLayout(spacing=8, size_hint=(1, 0.07))
     self.spn = Spinner(
         text=self.joriy,
@@ -335,7 +336,6 @@ class HomeScreen(Screen):
         size_hint=(0.72, 1),
     )
     self.spn.bind(text=self.hudud_ozgardi)
-
     btn_add = NiceButton(
         text="+ Bino",
         font_size="13sp",
@@ -345,50 +345,15 @@ class HomeScreen(Screen):
         size_hint=(0.28, 1),
     )
     btn_add.bind(on_press=self.yangi_bino)
-
     h_bar.add_widget(self.spn)
     h_bar.add_widget(btn_add)
     root.add_widget(h_bar)
 
+    # 3. Manzil va Xarita kartasi
     m_card = ModernCard(
         bg=(0.12, 0.16, 0.23, 1), padding=[10, 6], spacing=8, size_hint=(1, 0.085)
     )
-
-    root.add_widget(m_card)
-    self.add_widget(root)
-
-  def hudud_ozgardi(self, *args):
-    pass
-
-  def rejim_oyna(self, *args):
-    pass
-
-  def jurnal_oyna(self, *args):
-    pass
-
-  def yangi_bino(self, *args):
-    pass
-
-  def chiqish(self, *args):
-    pass
-
-
-class ODTIApp(App):
-  def build(self):
-    self.db = {"users": {"admin": "1234"}}
-    self.sm = ScreenManager()
-    self.login_screen = LoginScreen(self)
-    self.home_screen = HomeScreen(self)
-    self.sm.add_widget(self.login_screen)
-    self.sm.add_widget(self.home_screen)
-    return self.sm
-
-  def ochish(self, user):
-    self.sm.current = "home"
-
-  def save_db(self):
-    pass
-
-
-if __name__ == "__main__":
-  ODTIApp().run()
+    self.m_lbl = Label(
+        text="Manzil: ...",
+        font_size="12sp",
+        color=(0.95, 0.85, 0.45, 1),
