@@ -337,7 +337,7 @@ class MainScreen(Screen):
     hududlar = self.app.data["hududlar"]
     for k, v in hududlar.items():
       if k not in self.baza:
-        self.baza[k] = {
+        self.baza[k] = {}
             "t": [],
             "kwh": v[4],
             "pik": 0.0,
