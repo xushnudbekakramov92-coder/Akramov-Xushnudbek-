@@ -114,6 +114,8 @@ class BarChart(Widget):
         else:
           Color(0.15, 0.80, 0.45, 1)
         RoundedRectangle(pos=(bx, self.y + 8), size=(bw, max(bh, 10)), radius=[6])
+
+
 class LoginScr(Screen):
 
   def __init__(self, app, **kw):
@@ -127,8 +129,8 @@ class LoginScr(Screen):
 
     c = Card(orientation="vertical", padding=20, spacing=12, size_hint=(1, 0.62))
     c.add_widget(Label(text="Kabinetga kirish", font_size="19sp", bold=True, color=DARK, size_hint=(1, 0.18)))
-    self.acc = TextInput(text="3323310231747", hint_text="Hisob raqami", multiline=False, font_size="16sp", padding=, background_normal="", background_color=(0.94, 0.96, 0.98, 1), foreground_color=DARK, size_hint=(1, 0.19))
-    self.pw = TextInput(text="1234", hint_text="Parol", password=True, multiline=False, font_size="16sp", padding=, background_normal="", background_color=(0.94, 0.96, 0.98, 1), foreground_color=DARK, size_hint=(1, 0.19))
+    self.acc = TextInput(text="3323310231747", hint_text="Hisob raqami", multiline=False, font_size="16sp", padding=(10, 10), background_normal="", background_color=(0.94, 0.96, 0.98, 1), foreground_color=DARK, size_hint=(1, 0.19))
+    self.pw = TextInput(text="1234", hint_text="Parol", password=True, multiline=False, font_size="16sp", padding=(10, 10), background_normal="", background_color=(0.94, 0.96, 0.98, 1), foreground_color=DARK, size_hint=(1, 0.19))
     self.err = Label(text="", color=(0.9, 0.2, 0.2, 1), font_size="13sp", size_hint=(1, 0.10))
     btn = PillBtn(text="Davom etish", font_size="16sp", bold=True, r=20, size_hint=(1, 0.22))
     btn.bind(on_press=self.go)
@@ -165,7 +167,7 @@ class MainScr(Screen):
       self.sm.add_widget(p)
     root.add_widget(self.sm)
 
-    nav = Card(padding=, spacing=8, r=0, size_hint=(1, 0.10))
+    nav = Card(padding=10, spacing=8, r=0, size_hint=(1, 0.10))
     self.tabs = {}
     for code, name in [("home", "Asosiy"), ("stat", "Statistika"), ("map", "Filiallar"), ("help", "Yordam")]:
       b = PillBtn(text=name, font_size="13sp", bold=True, bg=TEAL if code == "home" else (0.93, 0.96, 0.98, 1), fg=WHITE if code == "home" else DARK, r=14)
@@ -322,3 +324,29 @@ class MainScr(Screen):
   def ust(self, sol, is_s):
     self.sol_m, self.sum_m = sol, is_s
     self.bel.bg, self.bel.color = ((0.88, 0.92, 0.96, 1), DARK) if sol else (TEAL, WHITE)
+    self.bsol.bg, self.bsol.color = (TEAL, WHITE) if sol else ((0.88, 0.92, 0.96, 1), DARK)
+    self.bkw.bg, self.bkw.color = ((0.88, 0.92, 0.96, 1), DARK) if is_s else (TEAL, WHITE)
+    self.bsm.bg, self.bsm.color = (TEAL, WHITE) if is_s else ((0.88, 0.92, 0.96, 1), DARK)
+    self.diag.set_mode(solar=sol, is_sum=is_s)
+    if sol:
+      self.diag.set_mode
+
+
+class MyApp(App):
+
+  def build(self):
+    self.sm = ScreenManager()
+    self.login = LoginScr(self)
+    self.main = MainScr(self)
+    self.sm.add_widget(self.login)
+    self.sm.add_widget(self.main)
+    self.sm.current = "login"
+    return self.sm
+
+  def enter(self, acc):
+    self.main.albl.text = "Hisob:\n" + acc
+    self.sm.current = "home"
+
+
+if __name__ == "__main__":
+  MyApp().run()
